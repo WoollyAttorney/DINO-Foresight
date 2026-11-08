@@ -1,14 +1,14 @@
 import argparse
+import os
+
 import cv2
 import glob
 import matplotlib
 import numpy as np
-import os
 from tqdm import tqdm
 import torch
-
-from depth_anything_v2.dpt import DepthAnythingV2
 from PIL import Image
+from depth_anything_v2.dpt import DepthAnythingV2
 
 
 if __name__ == '__main__':

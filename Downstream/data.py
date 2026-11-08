@@ -1,11 +1,13 @@
+import os
+
+import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-import transforms as T
 import pytorch_lightning as pl
-import torch
-import os
-import torchvision.transforms.v2 as Tv2
 import numpy as np
+
+import transforms as T
+
 
 class CityscapesDataset(Dataset):
     def __init__(self, root, split='train', transform=None, modality='semseg', num_classes=19):

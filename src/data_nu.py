@@ -1,4 +1,5 @@
 import os.path as osp
+
 import numpy as np
 import torch
 import torch.utils.data as data
@@ -32,7 +33,6 @@ class NuScenesRGBDataset(data.Dataset):
         __len__(): Returns the number of scenes in the dataset.
         __getitem__(idx): Retrieves a training window (or an evaluation window and its target frame) of scene idx.
     """
-
     def __init__(self, data_path, args, sequence_length, img_size, subset="train", eval_mode=False, eval_midterm=False, eval_modality=None, feature_extractor="dino"):
         super().__init__()
         # The devkit is only needed for nuScenes: pip install nuscenes-devkit
@@ -150,7 +150,6 @@ class NS_VideoData(pl.LightningDataModule):
         arguments: An object containing the required arguments for data loading.
         subset (str): The subset of the data to load. Default is "train".
     """
-
     def __init__(self, arguments, subset="train", batch_size=8):
         super().__init__()
         self.data_path = arguments.data_path

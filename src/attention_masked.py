@@ -1,12 +1,10 @@
 # BERT architecture for the Masked Bidirectional Encoder Transformer
-import torch
 import einops
+import torch
 from torch import nn
-import torch.nn.functional as F
 
 
 class PreNorm(nn.Module):
-
     def __init__(self, dim, fn):
         """ PreNorm module to apply layer normalization before a given function
             :param:
@@ -26,7 +24,7 @@ class PreNorm(nn.Module):
                 torch.Tensor: Output of the function applied after layer normalization
         """
         return self.fn(self.norm(x), **kwargs)
-        
+
 
 class FeedForward(nn.Module):
     def __init__(self, dim, hidden_dim, dropout=0.):
@@ -234,7 +232,6 @@ class MaskTransformer(nn.Module):
         self.fc_out = nn.Linear(hidden_dim, embedding_dim, bias=use_fc_bias)
         self.fc_out.weight.data.copy_(torch.zeros(embedding_dim, hidden_dim))
 
-
     def forward(self, vid_token, y=None, drop_label=None, return_attn=False):
         """ Forward.
             :param:
@@ -262,6 +259,7 @@ class MaskTransformer(nn.Module):
             return x_out,  attn
         else:
             return x_out,
+
 
 ################ Spatiotemporal broadcasted positional embeddings ###############
 class AddBroadcastPosEmbed(nn.Module):

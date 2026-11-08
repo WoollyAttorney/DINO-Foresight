@@ -1,7 +1,8 @@
 import random
+
 import numpy as np
 import torch
-import  torchvision.transforms.v2 as T
+import torchvision.transforms.v2 as T
 from torchvision.transforms import functional as F
 
 
@@ -26,6 +27,7 @@ class Resize:
         target = F.resize(target, self.size,interpolation=T.InterpolationMode.NEAREST)
         return image, target
 
+
 class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
@@ -34,6 +36,7 @@ class Compose:
         for t in self.transforms:
             image, target = t(image, target)
         return image, target
+
 
 class RandomPhotometricDistort:
     def __init__(self, p=0.5):

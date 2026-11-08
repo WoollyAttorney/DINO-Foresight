@@ -1,23 +1,22 @@
-import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
+import math
+
+import einops
+import numpy as np
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
 from torch import optim
-import einops
-from time import time
+import pytorch_lightning as pl
 import torchvision.transforms as T
 from torchvision.transforms import functional as TF
-import numpy as np
 from torchmetrics import JaccardIndex
 from torchmetrics.aggregation import MeanMetric
-from src.attention_masked import MaskTransformer
-import math
 from dpt import DPTHead
 import timm
+
+from src.attention_masked import MaskTransformer
+
 
 def update_depth_metrics(pred, gt, d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_m, silog_m, sq_rel_m):
     valid_pixels = gt > 0
@@ -46,6 +45,7 @@ def update_depth_metrics(pred, gt, d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m
     silog_m.update(silog)
     sq_rel_m.update(sq_rel)
 
+
 def compute_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_m, silog_m, sq_rel_m):
     d1 = d1_m.compute()
     d2 = d2_m.compute()
@@ -57,7 +57,8 @@ def compute_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_lo
     silog = silog_m.compute()
     sq_rel = sq_rel_m.compute()
     return d1, d2, d3, abs_rel, rmse, log_10, rmse_log, silog, sq_rel
-    
+
+
 def reset_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_m, silog_m, sq_rel_m):
     d1_m.reset()
     d2_m.reset()
@@ -68,6 +69,7 @@ def reset_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_
     rmse_log_m.reset()
     silog_m.reset()
     sq_rel_m.reset()
+
 
 def update_normal_metrics(pred, gt, mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_m, a5_m):
     """ compute per-pixel surface normal error in degrees
@@ -94,6 +96,7 @@ def update_normal_metrics(pred, gt, mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, 
     a4_m.update(a4)
     a5_m.update(a5)
 
+
 def compute_normal_metrics(mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_m, a5_m):
     mean_ae = mean_ae_m.compute()
     median_ae = median_ae_m.compute()
@@ -104,6 +107,7 @@ def compute_normal_metrics(mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_
     a4 = a4_m.compute()
     a5 = a5_m.compute()
     return mean_ae, median_ae, rmse, a1, a2, a3, a4, a5
+
 
 def reset_normal_metrics(mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_m, a5_m):
     mean_ae_m.reset()
@@ -226,7 +230,6 @@ class Dino_f(pl.LightningModule):
         self.batch_crops = []
         self.random_crop = T.RandomCrop(16,32)
         self.save_hyperparameters()
-       
 
     def on_load_checkpoint(self, checkpoint):
         if self.args.high_res_adapt:
@@ -237,7 +240,7 @@ class Dino_f(pl.LightningModule):
             pos_emb_w = checkpoint['state_dict']['maskvit.pos_embd.emb.d_2']
             pos_emb_w = F.interpolate(pos_emb_w.unsqueeze(0).unsqueeze(0), size=(self.img_size[1]//(self.patch_size), pos_emb_w.shape[1]), mode="bilinear")
             checkpoint['state_dict']['maskvit.pos_embd.emb.d_2'] = pos_emb_w.squeeze(0).squeeze(0)
-  
+
     def sliding_window(self, im, window_size, stride):
         B, SL, H, W, C = im.shape
         ws_h, ws_w = window_size
@@ -263,7 +266,6 @@ class Dino_f(pl.LightningModule):
         merged /= count
         return merged
 
-
     def crop_feats(self, x, use_crop_params=False):
         B, SL, H, W, c= x.shape
         x = x.permute(0, 1, 4, 2, 3)
@@ -287,7 +289,7 @@ class Dino_f(pl.LightningModule):
             else:
                 x = x[0]
         return x
-            
+
     def get_mask_tokens(self, x, mode="arccos", mask_frames=1):
         B, sl, h, w, c = x.shape # x.shape [B,T,H,W,C]
         assert mask_frames <= sl
@@ -397,7 +399,6 @@ class Dino_f(pl.LightningModule):
         x = x * self.std + self.mean
         return x
 
-
     def preprocess(self, x):
         B, T, C, H, W = x.shape
         # DINOv2 accepts 4 dimensions [B,C,H,W]. 
@@ -414,7 +415,7 @@ class Dino_f(pl.LightningModule):
         if self.args.pca_ckpt:
             x = self.pca_inverse_transform(x)
         return x
-    
+
     def calculate_loss(self, x_pred, x_target):
         if self.args.loss_type == "MSE":
             loss = F.mse_loss(x_pred, x_target)
@@ -429,7 +430,7 @@ class Dino_f(pl.LightningModule):
         x_target = x_target[mask] 
         x_pred = x_pred[mask] 
         return self.calculate_loss(x_pred, x_target)
-        
+
     def sample(self, x, sched_mode="arccos", step=15, mask_frames=1):
         self.maskvit.eval()
         with torch.no_grad():
@@ -530,8 +531,6 @@ class Dino_f(pl.LightningModule):
             return loss, x_pred, attn
         else:
             return loss, x_pred
-
-    
 
     def training_step(self, x, batch_idx):
         B = x.shape[0]
@@ -646,8 +645,7 @@ class Dino_f(pl.LightningModule):
             self.log('val/a4', a4, prog_bar=True, batch_size=1, on_step=True, logger=True, rank_zero_only=True)
             self.log('val/a5', a5, prog_bar=True, batch_size=1, on_step=True, logger=True, rank_zero_only=True)
         self.log('val/loss', loss, prog_bar=True, batch_size=data_tensor.shape[0], sync_dist=True, on_step=False, on_epoch=True, logger=True)
-        
-        
+
     def on_validation_epoch_end(self):
         if self.args.eval_mode:
             mean_loss = self.mean_metric.compute()

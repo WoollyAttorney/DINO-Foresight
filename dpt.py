@@ -33,24 +33,19 @@ def _make_scratch(in_shape, out_shape, groups=1, expand=False):
         scratch.layer4_rn = nn.Conv2d(
             in_shape[3], out_shape4, kernel_size=3, stride=1, padding=1, bias=False, groups=groups
         )
-
     return scratch
 
 
 class ResidualConvUnit(nn.Module):
     """Residual convolution module.
     """
-
     def __init__(self, features, activation, bn):
         """Init.
-
         Args:
             features (int): number of features
         """
         super().__init__()
-
         self.bn = bn
-
         self.groups=1
 
         self.conv1 = nn.Conv2d(
@@ -66,7 +61,6 @@ class ResidualConvUnit(nn.Module):
             self.bn2 = nn.BatchNorm2d(features)
 
         self.activation = activation
-
         self.skip_add = nn.quantized.FloatFunctional()
 
     def forward(self, x):
@@ -101,7 +95,6 @@ class FeatureFusionBlock(nn.Module):
 
     def __init__(self, features, activation, deconv=False, bn=False, expand=False, align_corners=True, size=None):
         """Init.
-
         Args:
             features (int): number of features
         """
@@ -109,9 +102,7 @@ class FeatureFusionBlock(nn.Module):
 
         self.deconv = deconv
         self.align_corners = align_corners
-
         self.groups=1
-
         self.expand = expand
         out_features = features
         if self.expand==True:
@@ -154,8 +145,6 @@ class FeatureFusionBlock(nn.Module):
         output = self.out_conv(output)
 
         return output
-
-
 
 
 def _make_fusion_block(features, use_bn, size = None):
@@ -225,7 +214,6 @@ class DPTHead(nn.Module):
         )
 
         self.scratch.stem_transpose = None
-        
         self.scratch.refinenet1 = _make_fusion_block(features, use_bn)
         self.scratch.refinenet2 = _make_fusion_block(features, use_bn)
         self.scratch.refinenet3 = _make_fusion_block(features, use_bn)
@@ -298,4 +286,3 @@ class DPTHead(nn.Module):
         # path_1 = F.interpolate(path_1, (int(patch_h * 14), int(patch_w * 14)), mode="bilinear", align_corners=True)
         out = self.scratch.output_conv(path_1)
         return out
-        

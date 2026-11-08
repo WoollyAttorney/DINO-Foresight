@@ -1,16 +1,17 @@
-import torch.nn as nn
-import torch
-import torch.nn.functional as F
-from torchvision import transforms
+import argparse
 import glob
 import os.path as osp
-from PIL import Image
-from tqdm import tqdm
-from sklearn.decomposition import PCA
-import numpy as np
-import argparse
-import timm
+
 import einops
+import numpy as np
+from PIL import Image
+from sklearn.decomposition import PCA
+import torch.nn as nn
+import torch
+from torchvision import transforms
+from tqdm import tqdm
+import timm
+
 
 class cityscapes_sequence_data(torch.utils.data.Dataset):
     def __init__(self, root_dir, transform=None, subset='train', img_size=(448, 896)):
@@ -34,6 +35,7 @@ class cityscapes_sequence_data(torch.utils.data.Dataset):
             image = self.transform(image)
         return image
 
+
 class dinov2(nn.Module):
     def __init__(self, dlayers=[2,5,8,11]):
         super(dinov2, self).__init__()
@@ -51,6 +53,7 @@ class dinov2(nn.Module):
                 x = x[0]
         return x
 
+
 class eva2_clip(nn.Module):
     def __init__(self, dlayers=[2,5,8,11], img_size=(448,896)):
         super(eva2_clip, self).__init__()
@@ -64,6 +67,7 @@ class eva2_clip(nn.Module):
             x = self.model.forward_intermediates(x, indices=self.dlayers, output_fmt  = 'NLC', norm=True, intermediates_only=True)
             x = torch.cat(x,dim=-1)
         return x
+
 
 class sam(nn.Module):
     def __init__(self, dlayers=[2,5,8,11],img_size=(448,896)):
@@ -80,14 +84,17 @@ class sam(nn.Module):
             x = torch.cat(x,dim=-1)
         return x
 
+
 # Create a DataLoader for the dataset
 def dataloader(root_dir,img_size=(448,896), batch_size=4, shuffle=False, num_workers=4,subset='train'):
     dataset = cityscapes_sequence_data(root_dir=root_dir, subset=subset, img_size=img_size)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
     return dataloader
 
+
 def parse_list(s, ): 
     return list(map(int, s.split(',')))
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -99,9 +106,9 @@ def parse_args():
     parser.add_argument('--cityscapes_root', type=str, default='/storage/cityscapes/leftImg8bit')
     return parser.parse_args()
 
+
 if __name__ == '__main__':
     args = parse_args()
-    print(args)
     n_components = args.n_components
     dtype = torch.float32
     cs_loader = dataloader(root_dir=args.cityscapes_root, img_size=args.img_size, batch_size=args.batch_size, subset='train')
@@ -168,7 +175,7 @@ if __name__ == '__main__':
         batch = batch.to(device).to(dtype)
         x = model(batch)
         f_list.append(x.flatten(end_dim=-2).float().cpu().numpy())
-    
+
     f = np.concatenate(f_list)
     print(f.shape)
     print('Standardizing')
@@ -179,4 +186,3 @@ if __name__ == '__main__':
     var = PCA.explained_variance_ratio_
     print(f'Explained variance: {var.sum()}')
     print(np.sum(np.var(f_pca, axis=0))/np.sum(np.var(f, axis=0)))
-    

@@ -1,14 +1,13 @@
+import einops
+import numpy as np
 import torch
 import torch.optim as optim
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from torchvision.transforms import functional as TF
-import sys, os
-import einops
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 from dpt import DPTHead
-import numpy as np
 import timm
+
 
 def update_depth_metrics(pred, gt, d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_m, silog_m, sq_rel_m):
     valid_pixels = gt > 0
@@ -37,7 +36,7 @@ def update_depth_metrics(pred, gt, d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m
     silog_m.update(silog)
     sq_rel_m.update(sq_rel)
 
-    
+
 def compute_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_m, silog_m, sq_rel_m):
     d1 = d1_m.compute()
     d2 = d2_m.compute()
@@ -49,7 +48,7 @@ def compute_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_lo
     silog = silog_m.compute()
     sq_rel = sq_rel_m.compute()
     return d1, d2, d3, abs_rel, rmse, log_10, rmse_log, silog, sq_rel
-    
+
 
 def reset_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_m, silog_m, sq_rel_m):
     d1_m.reset()
@@ -61,6 +60,7 @@ def reset_depth_metrics(d1_m, d2_m, d3_m, abs_rel_m, rmse_m, log_10_m, rmse_log_
     rmse_log_m.reset()
     silog_m.reset()
     sq_rel_m.reset()
+
 
 def update_normal_metrics(pred, gt, mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_m, a5_m):
     """ compute per-pixel surface normal error in degrees
@@ -87,6 +87,7 @@ def update_normal_metrics(pred, gt, mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, 
     a4_m.update(a4)
     a5_m.update(a5)
 
+
 def compute_normal_metrics(mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_m, a5_m):
     mean_ae = mean_ae_m.compute()
     median_ae = median_ae_m.compute()
@@ -97,6 +98,7 @@ def compute_normal_metrics(mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_
     a4 = a4_m.compute()
     a5 = a5_m.compute()
     return mean_ae, median_ae, rmse, a1, a2, a3, a4, a5
+
 
 def reset_normal_metrics(mean_ae_m, median_ae_m, rmse_m, a1_m, a2_m, a3_m, a4_m, a5_m):
     mean_ae_m.reset()
@@ -174,18 +176,18 @@ class DinoV2DPTModel(pl.LightningModule):
         self.save_hyperparameters()
         # Set to False because we only care about the Head
         self.strict_loading = False
-            
+
     def state_dict(self):
         # Save only the head weights. Backbone weights are not needed (Frozen)
         return {k: v for k, v in super().state_dict().items() if "head" in k}
-    
+
     def pca_transform(self, x):
         BT, HW, C = x.shape
         x = (x - self.mean.to(x.device)) / self.std.to(x.device)
         x = x - self.pca_mean
         x_pca = torch.matmul(x, self.pca_components.T)
         return x_pca
-    
+
     def pca_inverse_transform(self, x):
         BT, HW, C = x.shape
         x = torch.matmul(x, self.pca_components) + self.pca_mean
@@ -227,7 +229,6 @@ class DinoV2DPTModel(pl.LightningModule):
         self.log("Train/lr", lr, logger=True, on_step=True, prog_bar=True, rank_zero_only=True)
         return loss
 
-
     def validation_step(self, batch, batch_idx):
         x, gt = batch
         out = self.forward(x)
@@ -266,7 +267,7 @@ class DinoV2DPTModel(pl.LightningModule):
             self.log('val/a3', a3, prog_bar=True, batch_size=1, on_step=True, logger=True, rank_zero_only=True)
             self.log('val/a4', a4, prog_bar=True, batch_size=1, on_step=True, logger=True, rank_zero_only=True)
             self.log('val/a5', a5, prog_bar=True, batch_size=1, on_step=True, logger=True, rank_zero_only=True)
-    
+
     def on_validation_epoch_end(self):
         if self.args.modality == "segm":
             IoU = self.iou_metric.compute()
@@ -286,7 +287,7 @@ class DinoV2DPTModel(pl.LightningModule):
             print("mean_ae =%10f" % (mean_ae), "median_ae =%10f" % (median_ae), "rmse =%10f" % (rmse), "a1 =%10f" % (a1), "a2 =%10f" % (a2), "a3 =%10f" % (a3), "a4 =%10f" % (a4), "a5 =%10f" % (a5))
             self.log_dict({"mean_ae":mean_ae, "median_ae":median_ae, "rmse":rmse, "a1":a1, "a2":a2, "a3":a3, "a4":a4, "a5":a5}, logger=True, prog_bar=True)
             reset_normal_metrics(self.mean_ae, self.median_ae, self.rmse, self.a1, self.a2, self.a3, self.a4, self.a5)
-    
+
     def configure_optimizers(self):
         if self.args.optimizer == "adam":
             optimizer = optim.Adam(self.parameters(), lr=self.args.lr,weight_decay=self.args.weight_decay, betas=(0.9, 0.999))

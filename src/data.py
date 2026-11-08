@@ -1,4 +1,5 @@
 import os.path as osp
+
 import glob
 import numpy as np
 import torch
@@ -8,11 +9,11 @@ import torchvision.transforms.functional as TF
 import pytorch_lightning as pl
 from PIL import Image
 
+
 class CityScapesRGBDataset(data.Dataset):
     """
     A custom dataset class for CityScapes segmentation dataset.
     Args:
-
         data_path (str): The path to the data folder.
         sequence_length (int): The length of each sequence.
         shape (tuple): The desired shape of the frames.
@@ -32,7 +33,6 @@ class CityScapesRGBDataset(data.Dataset):
         __len__(): Returns the number of sequences in the dataset.
         __getitem__(idx): Retrieves the frames and their corresponding file paths for a given index.
     """
-
     def __init__(self, data_path, args, sequence_length, img_size, subset="train", eval_mode=False, eval_midterm=False, eval_modality=None, feature_extractor="dino"):
         super().__init__()
         self.data_path = data_path
@@ -108,7 +108,7 @@ class CityScapesRGBDataset(data.Dataset):
             frames = process_trainmode(frames_filepaths,self.img_size, self.subset, self.augmentations, self.sequence_length, feature_extractor=self.feature_extractor)
             return frames
 
-       
+
 def process_trainmode(frames_path, img_size, subset, augmentations, sequence_length=5, num_frames_skip=0, feature_extractor="dino"):
     if subset=="val":
         num_frames_skip = 2 
@@ -146,6 +146,7 @@ def process_trainmode(frames_path, img_size, subset, augmentations, sequence_len
     sequence_tensors = [transform(frame) for frame in sequence_frames]
     sequence_tensor = torch.stack(sequence_tensors, dim=0)
     return sequence_tensor
+
 
 def process_evalmode(frames_path, img_size, subset, sequence_length=5, eval_midterm=False, eval_modality=None, feature_extractor="dino"):
     num_frames_skip = 2 
@@ -187,7 +188,6 @@ def process_evalmode(frames_path, img_size, subset, sequence_length=5, eval_midt
         gt_normals_img = torch.from_numpy(gt_normals_img).permute(2, 0, 1)
         return sequence_tensor, gt_img, gt_normals_img
 
-        
 
 class CS_VideoData(pl.LightningDataModule):
     """
@@ -205,7 +205,6 @@ class CS_VideoData(pl.LightningDataModule):
         shape (tuple): The shape of the video frames.
         downsample_factor (int): The factor by which to downsample the frames.
     """
-
     def __init__(self, arguments, subset="train", batch_size=8):
         super().__init__()
         self.data_path = arguments.data_path
@@ -223,7 +222,6 @@ class CS_VideoData(pl.LightningDataModule):
         self.use_val_to_train = arguments.use_val_to_train
         self.use_train_to_val = arguments.use_train_to_val
         self.feature_extractor = arguments.feature_extractor
-
 
     def _dataset(self, subset, eval_mode):
         """
@@ -283,4 +281,3 @@ class CS_VideoData(pl.LightningDataModule):
             DataLoader: The dataloader object for test data.
         """
         return self._dataloader(subset="test")
-
