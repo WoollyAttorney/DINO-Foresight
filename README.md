@@ -165,7 +165,7 @@ wget https://huggingface.co/Sta8is/DINO-Foresight/resolve/main/dinof_highres.ckp
 ```
 
 # Downstream Tasks
-We provide the scripts to train and and evaluate a [DPT-head](https://github.com/isl-org/DPT) (our implementation is mostly based to [DPT of DepthAnything](https://github.com/LiheYoung/Depth-Anything/tree/main/depth_anything)) on the downstream tasks of semantic segmentation, depth estimation and surface normal estimation. For more details about the library of  DPT-heads, refer to [Downstream Tasks](Downstream/README.md).
+We provide the scripts to train and and evaluate a [DPT-head](https://github.com/isl-org/DPT) (our implementation is mostly based to [DPT of DepthAnything](https://github.com/LiheYoung/Depth-Anything/tree/main/depth_anything)) on the downstream tasks of semantic segmentation, depth estimation and surface normal estimation. For more details about the library of  DPT-heads, refer to [Downstream Tasks](downstream/README.md).
 
 # Evaluation
 To evaluate feature prediction on downstream tasks, run the following commands:
