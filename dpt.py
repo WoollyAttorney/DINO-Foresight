@@ -1,8 +1,5 @@
-import argparse
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
 
 def _make_scratch(in_shape, out_shape, groups=1, expand=False):
     scratch = nn.Module()
@@ -72,7 +69,6 @@ class ResidualConvUnit(nn.Module):
         Returns:
             tensor: output
         """
-        
         out = self.activation(x)
         out = self.conv1(out)
         if self.bn==True:
@@ -92,7 +88,6 @@ class ResidualConvUnit(nn.Module):
 class FeatureFusionBlock(nn.Module):
     """Feature fusion block.
     """
-
     def __init__(self, features, activation, deconv=False, bn=False, expand=False, align_corners=True, size=None):
         """Init.
         Args:
@@ -107,14 +102,11 @@ class FeatureFusionBlock(nn.Module):
         out_features = features
         if self.expand==True:
             out_features = features//2
-        
-        self.out_conv = nn.Conv2d(features, out_features, kernel_size=1, stride=1, padding=0, bias=True, groups=1)
 
+        self.out_conv = nn.Conv2d(features, out_features, kernel_size=1, stride=1, padding=0, bias=True, groups=1)
         self.resConfUnit1 = ResidualConvUnit(features, activation, bn)
         self.resConfUnit2 = ResidualConvUnit(features, activation, bn)
-        
         self.skip_add = nn.quantized.FloatFunctional()
-
         self.size=size
 
     def forward(self, *xs, size=None):
@@ -124,7 +116,6 @@ class FeatureFusionBlock(nn.Module):
             tensor: output
         """
         output = xs[0]
-
         if len(xs) == 2:
             res = self.resConfUnit1(xs[1])
             output = self.skip_add.add(output, res)
@@ -141,9 +132,7 @@ class FeatureFusionBlock(nn.Module):
         output = nn.functional.interpolate(
             output, **modifier, mode="bilinear", align_corners=self.align_corners
         )
-
         output = self.out_conv(output)
-
         return output
 
 
