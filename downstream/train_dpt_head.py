@@ -23,7 +23,6 @@ def parse_tuple(s):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-
     # Data Parameters
     parser.add_argument('--data_path', type=str, default="/home/ubuntu/cityscapes")
     parser.add_argument('--img_size', type=parse_tuple, default=(448,896))

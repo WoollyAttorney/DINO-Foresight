@@ -17,6 +17,7 @@ def parse_tuple(x):
 def parse_list(x):
     return list(map(int, x.split(',')))
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     # Data Parameters
@@ -89,7 +90,6 @@ def parse_args():
     parser.add_argument('--use_train_to_val', action='store_true', default=False)
     parser.add_argument('--evaluate_baseline', action='store_true', default=False)
     parser.add_argument('--eval_midterm', action='store_true', default=False)
-
     args = parser.parse_args()
     return args
 
